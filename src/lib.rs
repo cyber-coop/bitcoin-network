@@ -1,8 +1,8 @@
 mod utils;
-use crate::utils::checksum;
+use crate::utils::{checksum, slice_to_array};
 use varint::VarInt;
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct Message {
     pub magic_bytes: [u8; 4],
     pub command: String,
@@ -24,14 +24,30 @@ impl Message {
 
     pub fn serialize(&self) -> Vec<u8> {
         let mut result: Vec<u8> = Vec::new();
+        result.extend(self.magic_bytes);
         let mut command = self.command.as_bytes().to_owned();
         command.resize(12, 0);
-        result.extend(self.magic_bytes);
         result.extend(command);
         result.extend(self.size.to_le_bytes());
         result.extend(self.checksum);
         result.extend(self.payload.clone());
         return result;
+    }
+
+    pub fn deserialize(bytes: Vec<u8>) -> Message {
+        let magic_bytes = slice_to_array(&bytes[0..4]);
+        let mut command = bytes[4..16].to_vec();
+        command.retain(|&x| x != 0);
+        let command = String::from_utf8(command).unwrap();
+        let payload_size = u32::from_le_bytes(slice_to_array(&bytes[16..20]));
+        let payload = bytes[24..24 + (payload_size as usize)].to_vec();
+        Self {
+            magic_bytes: magic_bytes,
+            command: command,
+            size: payload_size.clone(),
+            checksum: checksum(&payload),
+            payload: payload,
+        }
     }
 }
 
