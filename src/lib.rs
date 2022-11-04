@@ -133,3 +133,32 @@ impl Inventory {
         return result;
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_message_serialize() {
+        let verack = Message::new([0xFC, 0xC1, 0xB7, 0xDC], "verack".to_string(), vec![]);
+        assert_eq!(
+            verack.serialize(),
+            [
+                252, 193, 183, 220, 118, 101, 114, 97, 99, 107, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 93,
+                246, 224, 226,
+            ]
+        );
+    }
+
+    #[test]
+    fn test_message_deserialize() {
+        let bytes: [u8; 24] = [
+            252, 193, 183, 220, 118, 101, 114, 97, 99, 107, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 93, 246,
+            224, 226,
+        ];
+        assert_eq!(
+            Message::deserialize(bytes.to_vec()),
+            Message::new([0xFC, 0xC1, 0xB7, 0xDC], "verack".to_string(), vec![])
+        );
+    }
+}
