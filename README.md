@@ -1,0 +1,2 @@
+[![codecov](https://codecov.io/gh/cyber-coop/bitcoin-network/branch/main/graph/badge.svg?token=19CGESEQW2)](https://codecov.io/gh/cyber-coop/bitcoin-network)  
+[![coverage](https://github.com/cyber-coop/bitcoin-network/actions/workflows/coverage.yml/badge.svg)](https://github.com/cyber-coop/bitcoin-network/actions/workflows/coverage.yml)
