@@ -39,3 +39,45 @@ impl GetData {
         Self { count, inventory }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_get_data_serialize() {
+        let mut hash =
+            hex::decode("5bf400bf44ac7a7cb0542ee7e3f9374f68be2dfdf0d64a654c2def6288b3936b")
+                .unwrap();
+        hash.reverse();
+        assert_eq!(
+            GetData::new(vec![Inventory {
+                identifier: 1,
+                hash: hash.try_into().unwrap(),
+            }])
+            .serialize(),
+            [
+                1, 1, 0, 0, 0, 107, 147, 179, 136, 98, 239, 45, 76, 101, 74, 214, 240, 253, 45,
+                190, 104, 79, 55, 249, 227, 231, 46, 84, 176, 124, 122, 172, 68, 191, 0, 244, 91,
+            ]
+        )
+    }
+
+    #[test]
+    fn test_get_data_deserialize() {
+        let mut hash =
+            hex::decode("5bf400bf44ac7a7cb0542ee7e3f9374f68be2dfdf0d64a654c2def6288b3936b")
+                .unwrap();
+        hash.reverse();
+        assert_eq!(
+            GetData::deserialize(&[
+                1, 1, 0, 0, 0, 107, 147, 179, 136, 98, 239, 45, 76, 101, 74, 214, 240, 253, 45,
+                190, 104, 79, 55, 249, 227, 231, 46, 84, 176, 124, 122, 172, 68, 191, 0, 244, 91,
+            ]),
+            GetData::new(vec![Inventory {
+                identifier: 1,
+                hash: hash.try_into().unwrap(),
+            }])
+        )
+    }
+}
