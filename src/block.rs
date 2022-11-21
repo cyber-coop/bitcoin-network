@@ -1,4 +1,5 @@
 use crate::tx::Tx;
+use crate::utils;
 use varint::VarInt;
 
 #[derive(Debug, Clone, PartialEq)]
@@ -15,9 +16,35 @@ pub struct Block {
 }
 
 impl Block {
+
+    pub fn hash(&self) -> [u8;32] {
+        let block_header = &self.serialize_header();
+
+        utils::double_hash(&block_header)
+    }
+
+    pub fn serialize_header(&self) -> Vec<u8> {
+        let mut result: Vec<u8> = vec![];
+        result.extend(self.version.to_le_bytes());
+        result.extend(self.previous_hash);
+        result.extend(self.merkle_root);
+        result.extend(self.timestamp.to_le_bytes());
+        result.extend(self.bits.to_le_bytes());
+        result.extend(self.nonce.to_le_bytes());
+
+        result
+    }
+
     pub fn serialize(&self) -> Vec<u8> {
         let mut result: Vec<u8> = vec![];
         result.extend(self.version.to_le_bytes());
+        result.extend(self.previous_hash);
+        result.extend(self.merkle_root);
+        result.extend(self.timestamp.to_le_bytes());
+        result.extend(self.bits.to_le_bytes());
+        result.extend(self.nonce.to_le_bytes());
+
+        //TODO: serialize transactions
 
         result
     }
