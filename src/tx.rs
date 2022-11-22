@@ -17,8 +17,6 @@ impl Tx {
     pub fn deserialize_with_size(bytes: &[u8]) -> (Tx, usize) {
         let mut offset = 0;
 
-        dbg!(hex::encode(&bytes));
-
         let version = u32::from_le_bytes(bytes[offset..offset+4].try_into().unwrap());
         offset += 4;
 
@@ -27,13 +25,10 @@ impl Tx {
         let varint_size = VarInt::get_size(count).unwrap();
         offset += varint_size as usize; 
 
-        dbg!(count);
-
         let mut tx_ins : Vec<TxIn> = vec![];
         for _n in 1..count {
             let (tx_in, size) = TxIn::deserialize_with_size(&bytes[offset..]);
             offset += size;
-            dbg!(size);
 
             tx_ins.push(tx_in);
         }
@@ -42,8 +37,6 @@ impl Tx {
         let count = VarInt::decode(&bytes[offset..offset+9]).unwrap();
         let varint_size = VarInt::get_size(count).unwrap();
         offset += varint_size as usize; 
-
-        dbg!(count);
 
         let mut tx_outs : Vec<TxOut> = vec![];
         for _n in 1..count {
