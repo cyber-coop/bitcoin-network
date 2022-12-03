@@ -1,4 +1,5 @@
 use varint::VarInt;
+use crate::error::DeserializeError;
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct Tx {
@@ -14,24 +15,26 @@ impl Tx {
     }
 
     // We only know the size of the tx after deserializing it. To know when the next tx start we have to return the value
-    pub fn deserialize_with_size(bytes: &[u8]) -> (Tx, usize) {
-        let version = u32::from_le_bytes(bytes[0..4].try_into().unwrap());
-        // Deserialize tx inputs
-        let count = VarInt::decode(&bytes[4..]).unwrap();
-        let varint_size = VarInt::get_size(count).unwrap();
+    pub fn deserialize_with_size(bytes: &[u8]) -> Result<(Tx, usize), DeserializeError> {
+        let mut iter = bytes.iter().cloned();
 
-        let mut offset = 4 + varint_size as usize;
+        let version = u32::from_le_bytes(iter.next_chunk::<4>()?);
+        // Deserialize tx inputs
+        let count = VarInt::decode(&bytes[4..])?;
+        let varint_size = VarInt::get_size(count)?;
+        iter.advance_by(varint_size)?;
+
         let mut tx_ins: Vec<TxIn> = vec![];
         for _ in 1..count {
-            let (tx_in, size) = TxIn::deserialize_with_size(&bytes[offset..]);
-            offset += size;
+            let (tx_in, size) = TxIn::deserialize_with_size(&iter.clone().collect::<Vec<u8>>());
+            iter.advance_by(size)?;
             tx_ins.push(tx_in);
         }
 
         // Deserialize tx ouputs
-        let count = VarInt::decode(&bytes[offset..offset + 9]).unwrap();
-        let varint_size = VarInt::get_size(count).unwrap();
-        offset += varint_size as usize; 
+        let count = VarInt::decode(&iter.clone().collect::<Vec<u8>>())?;
+        let varint_size = VarInt::get_size(count)?;
+        iter.advance_by(varint_size)?;
         
         let mut tx_outs : Vec<TxOut> = vec![];
         for _n in 0..count {

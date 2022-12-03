@@ -2,6 +2,7 @@
 
 pub mod address;
 pub mod block;
+pub mod error;
 pub mod get_blocks;
 pub mod get_data;
 pub mod inventory;

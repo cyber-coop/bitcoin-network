@@ -1,5 +1,6 @@
 use crate::address::Address;
 use varint::VarInt;
+use crate::error::DeserializeError;
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct Version {
@@ -30,7 +31,7 @@ impl Version {
         result
     }
 
-    pub fn deserialize(bytes: &[u8]) -> Result<Self, VersionError> {
+    pub fn deserialize(bytes: &[u8]) -> Result<Self, DeserializeError> {
         let mut iter = bytes.iter().cloned();
 
         let version = u32::from_le_bytes(iter.next_chunk::<4>()?);
@@ -47,10 +48,10 @@ impl Version {
         iter.advance_by(varint as usize)?;
 
         let start_height = u32::from_le_bytes(iter.next_chunk::<4>()?);
-        let relay = match iter.next().ok_or(VersionError("Missing bytes".to_owned()))? {
+        let relay = match iter.next().ok_or(DeserializeError("Missing bytes".to_owned()))? {
             0 => false,
             1 => true,
-            _ => { return Err(VersionError("Failed to deserialize relay value".to_owned())) }
+            _ => { return Err(DeserializeError("Failed to deserialize relay value".to_owned())) }
         };
 
         Ok(Self {
@@ -66,27 +67,6 @@ impl Version {
         })
     }
 }
-
-#[derive(Debug)]
-pub struct VersionError(String);
-
-
-impl<const N: usize> From<std::array::IntoIter<u8, N>> for VersionError {
-    fn from(_e: std::array::IntoIter<u8, N>) -> Self { VersionError("Failed to read bytes".to_owned()) }
-}
-
-impl From<std::io::Error> for VersionError {
-    fn from(_e: std::io::Error) -> Self { VersionError("Failed to read varint".to_owned()) }
-}
-
-impl From<usize> for VersionError {
-    fn from(_e: usize) -> Self { VersionError("Failed to advance bytes".to_owned()) }
-}
-
-impl From<std::string::FromUtf8Error> for VersionError {
-    fn from(_e: std::string::FromUtf8Error) -> Self { VersionError("Failed to convert from utf8".to_owned()) }
-}
-
 
 #[cfg(test)]
 mod tests {

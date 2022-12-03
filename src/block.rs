@@ -1,6 +1,7 @@
 use crate::tx::Tx;
 use crate::utils;
 use varint::VarInt;
+use crate::error::DeserializeError;
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct Block {
@@ -44,27 +45,29 @@ impl Block {
         result
     }
 
-    pub fn deserialize(bytes: &[u8]) -> Block {
+    pub fn deserialize(bytes: &[u8]) -> Result<Block, DeserializeError> {
+        let mut iter = bytes.iter().cloned();
+
         // Block header
-        let version = u32::from_le_bytes(bytes[0..4].try_into().unwrap());
-        let previous_hash = bytes[4..36].try_into().unwrap();
-        let merkle_root = bytes[36..68].try_into().unwrap();
-        let timestamp = u32::from_le_bytes(bytes[68..72].try_into().unwrap());
-        let bits = u32::from_le_bytes(bytes[72..76].try_into().unwrap());
-        let nonce = u32::from_le_bytes(bytes[76..80].try_into().unwrap());
+        let version = u32::from_le_bytes(iter.next_chunk::<4>()?);
+        let previous_hash = iter.next_chunk::<32>()?;
+        let merkle_root = iter.next_chunk::<32>()?;
+        let timestamp = u32::from_le_bytes(iter.next_chunk::<4>()?);
+        let bits = u32::from_le_bytes(iter.next_chunk::<4>()?);
+        let nonce = u32::from_le_bytes(iter.next_chunk::<4>()?);
 
-        let count = VarInt::decode(&bytes[80..89]).unwrap();
+        let count = VarInt::decode(&bytes[80..]?);
         let varint_size = VarInt::get_size(count).unwrap();
+        iter.advance_by(varint_size)?;
 
-        let mut offset = 80 + varint_size as usize;
         let mut transactions: Vec<Tx> = vec![];
         for _ in 0..count - 1 {
-            let (tx, tx_size) = Tx::deserialize_with_size(&bytes[offset..]);
-            offset += tx_size;
+            let (tx, tx_size) = Tx::deserialize_with_size(&iter.clone().collect<Vec<u8>>());
+            iter.advance_by(tx_size)?;
             transactions.push(tx);
         }
 
-        Self {
+        Ok(Self {
             version,
             previous_hash,
             merkle_root,
@@ -72,6 +75,6 @@ impl Block {
             bits,
             nonce,
             transactions,
-        }
+        })
     }
 }

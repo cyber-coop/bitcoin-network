@@ -1,4 +1,5 @@
 use crate::utils::checksum;
+use crate::error::DeserializeError;
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct Message {
@@ -32,20 +33,22 @@ impl Message {
         result
     }
 
-    pub fn deserialize(bytes: &[u8]) -> Message {
-        let magic_bytes = bytes[0..4].try_into().unwrap();
-        let mut command = bytes[4..16].to_vec();
+    pub fn deserialize(bytes: &[u8]) -> Result<Message, DeserializeError> {
+        let mut iter = bytes.iter().cloned();
+
+        let magic_bytes = iter.next_chunk::<4>()?;
+        let mut command = iter.next_chunk::<12>()?;
         command.retain(|&x| x != 0);
-        let command = String::from_utf8(command).unwrap();
-        let payload_size = u32::from_le_bytes(bytes[16..20].try_into().unwrap());
-        let payload = bytes[24..24 + (payload_size as usize)].to_vec();
-        Self {
+        let command = String::from_utf8(command)?;
+        let size = u32::from_le_bytes(iter.next_chunk::<4>()?);
+        let payload = iter.collect<Vec<u8>>();
+        Ok( Self {
             magic_bytes,
             command,
-            size: payload_size.clone(),
+            size,
             checksum: checksum(&payload),
             payload,
-        }
+        })
     }
 }
 
@@ -72,7 +75,7 @@ mod tests {
             224, 226,
         ];
         assert_eq!(
-            Message::deserialize(&bytes),
+            Message::deserialize(&bytes).unwrap(),
             Message::new([0xFC, 0xC1, 0xB7, 0xDC], "verack".to_string(), vec![])
         );
     }
