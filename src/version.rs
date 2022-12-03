@@ -30,32 +30,63 @@ impl Version {
         result
     }
 
-    pub fn deserialize(bytes: &[u8]) -> Version {
-        let varint = VarInt::decode(&bytes[80..89]).unwrap();
-        let varint_size = VarInt::get_size(varint).unwrap();
-        Self {
-            version: u32::from_le_bytes(bytes[0..4].try_into().unwrap()),
-            services: u64::from_le_bytes(bytes[4..12].try_into().unwrap()),
-            timestamp: u64::from_le_bytes(bytes[12..20].try_into().unwrap()),
-            addr_recv: Address::deserialize(bytes[20..46].try_into().unwrap()),
-            addr_trans: Address::deserialize(bytes[46..72].try_into().unwrap()),
-            nonce: u64::from_le_bytes(bytes[72..80].try_into().unwrap()),
-            user_agent: String::from_utf8(
-                bytes[80 + varint_size as usize..80 + varint_size as usize + varint as usize]
-                    .to_vec(),
-            )
-            .unwrap(),
-            start_height: u32::from_le_bytes(
-                bytes[bytes.len() - 5..bytes.len() - 1].try_into().unwrap(),
-            ),
-            relay: match bytes[bytes.len() - 1] {
-                0 => false,
-                1 => true,
-                _ => panic!("Invalid bool in u8"),
-            },
-        }
+    pub fn deserialize(bytes: &[u8]) -> Result<Self, VersionError> {
+        let mut iter = bytes.iter().cloned();
+
+        let version = u32::from_le_bytes(iter.next_chunk::<4>()?);
+        let services = u64::from_le_bytes(iter.next_chunk::<8>()?);
+        let timestamp = u64::from_le_bytes(iter.next_chunk::<8>()?);
+        let addr_recv = Address::deserialize(&iter.next_chunk::<26>()?);
+        let addr_trans = Address::deserialize(&iter.next_chunk::<26>()?);
+        let nonce = u64::from_le_bytes(iter.next_chunk::<8>()?);
+
+        let varint = VarInt::decode(&bytes[80..])?;
+        let varint_size = VarInt::get_size(varint)? as usize;
+        iter.advance_by(varint_size)?;
+        let user_agent = String::from_utf8(iter.clone().take(varint as usize).collect())?;
+        iter.advance_by(varint as usize)?;
+
+        let start_height = u32::from_le_bytes(iter.next_chunk::<4>()?);
+        let relay = match iter.next().ok_or(VersionError("Missing bytes".to_owned()))? {
+            0 => false,
+            1 => true,
+            _ => { return Err(VersionError("Failed to deserialize relay value".to_owned())) }
+        };
+
+        Ok(Self {
+            version,
+            services,
+            timestamp,
+            addr_recv,
+            addr_trans,
+            nonce,
+            user_agent,
+            start_height,
+            relay,
+        })
     }
 }
+
+#[derive(Debug)]
+pub struct VersionError(String);
+
+
+impl<const N: usize> From<std::array::IntoIter<u8, N>> for VersionError {
+    fn from(_e: std::array::IntoIter<u8, N>) -> Self { VersionError("Failed to read bytes".to_owned()) }
+}
+
+impl From<std::io::Error> for VersionError {
+    fn from(_e: std::io::Error) -> Self { VersionError("Failed to read varint".to_owned()) }
+}
+
+impl From<usize> for VersionError {
+    fn from(_e: usize) -> Self { VersionError("Failed to advance bytes".to_owned()) }
+}
+
+impl From<std::string::FromUtf8Error> for VersionError {
+    fn from(_e: std::string::FromUtf8Error) -> Self { VersionError("Failed to convert from utf8".to_owned()) }
+}
+
 
 #[cfg(test)]
 mod tests {
@@ -101,7 +132,7 @@ mod tests {
                 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 255, 255, 127, 0, 0, 1, 0, 0, 1, 0, 0, 0, 0,
                 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 255, 255, 127, 0, 0, 1, 0, 0, 1, 0, 0, 0, 0,
                 0, 0, 0, 11, 101, 116, 104, 105, 99, 110, 111, 108, 111, 103, 121, 0, 0, 0, 0, 0,
-            ]),
+            ]).unwrap(),
             Version {
                 version: 70004,
                 services: 4,

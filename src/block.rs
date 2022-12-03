@@ -1,6 +1,5 @@
 use crate::tx::Tx;
 use crate::utils;
-use std::io::Error;
 use varint::VarInt;
 
 #[derive(Debug, Clone, PartialEq)]
@@ -17,12 +16,12 @@ pub struct Block {
 }
 
 impl Block {
-    pub fn hash(&self) -> Result<[u8; 32], Error> {
-        let block_header = &self.serialize_header().unwrap();
-        Ok(utils::double_hash(block_header))
+    pub fn hash(&self) -> [u8; 32] {
+        let block_header = &self.serialize_header();
+        utils::double_hash(block_header)
     }
 
-    pub fn serialize_header(&self) -> Result<Vec<u8>, Error> {
+    pub fn serialize_header(&self) -> Vec<u8> {
         let mut result: Vec<u8> = vec![];
         result.extend(self.version.to_le_bytes());
         result.extend(self.previous_hash);
@@ -30,10 +29,10 @@ impl Block {
         result.extend(self.timestamp.to_le_bytes());
         result.extend(self.bits.to_le_bytes());
         result.extend(self.nonce.to_le_bytes());
-        Ok(result)
+        result
     }
 
-    pub fn serialize(&self) -> Result<Vec<u8>, Error> {
+    pub fn serialize(&self) -> Vec<u8> {
         let mut result: Vec<u8> = vec![];
         result.extend(self.version.to_le_bytes());
         result.extend(self.previous_hash);
@@ -42,7 +41,7 @@ impl Block {
         result.extend(self.bits.to_le_bytes());
         result.extend(self.nonce.to_le_bytes());
         //TODO: serialize transactions
-        Ok(result)
+        result
     }
 
     pub fn deserialize(bytes: &[u8]) -> Block {

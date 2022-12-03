@@ -1,4 +1,3 @@
-use std::io::Error;
 use varint::VarInt;
 
 #[derive(Debug, Clone, PartialEq)]
@@ -10,7 +9,7 @@ pub struct Tx {
 }
 
 impl Tx {
-    pub fn serialize(&self) -> Result<Vec<u8>, Error> {
+    pub fn serialize(&self) -> Vec<u8> {
         todo!();
     }
 
@@ -32,10 +31,10 @@ impl Tx {
         // Deserialize tx ouputs
         let count = VarInt::decode(&bytes[offset..offset + 9]).unwrap();
         let varint_size = VarInt::get_size(count).unwrap();
-        offset += varint_size as usize;
-
-        let mut tx_outs: Vec<TxOut> = vec![];
-        for _ in 1..count {
+        offset += varint_size as usize; 
+        
+        let mut tx_outs : Vec<TxOut> = vec![];
+        for _n in 0..count {
             let (tx_out, size) = TxOut::deserialize_with_size(&bytes[offset..]);
             offset += size;
             tx_outs.push(tx_out);
@@ -68,7 +67,7 @@ pub struct TxIn {
 }
 
 impl TxIn {
-    pub fn serialize(&self) -> Result<Vec<u8>, Error> {
+    pub fn serialize(&self) -> Vec<u8> {
         todo!();
     }
 
@@ -107,7 +106,7 @@ pub struct Outpoint {
 }
 
 impl Outpoint {
-    pub fn serialize(&self) -> Result<Vec<u8>, Error> {
+    pub fn serialize(&self) -> Vec<u8> {
         todo!();
     }
 
@@ -128,7 +127,7 @@ pub struct TxOut {
 }
 
 impl TxOut {
-    pub fn serialize(&self) -> Result<Vec<u8>, Error> {
+    pub fn serialize(&self) -> Vec<u8> {
         todo!();
     }
 

@@ -1,3 +1,5 @@
+#![feature(iter_next_chunk, iter_advance_by)]
+
 pub mod address;
 pub mod block;
 pub mod get_blocks;
