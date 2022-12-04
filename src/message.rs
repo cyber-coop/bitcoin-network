@@ -1,5 +1,6 @@
 use crate::utils::checksum;
 use crate::error::DeserializeError;
+use std::io::{Cursor, Read};
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct Message {
@@ -34,15 +35,27 @@ impl Message {
     }
 
     pub fn deserialize(bytes: &[u8]) -> Result<Message, DeserializeError> {
-        let mut iter = bytes.iter().cloned();
+        let mut cur = Cursor::new(bytes);
 
-        let magic_bytes = iter.next_chunk::<4>()?;
-        let mut command = iter.next_chunk::<12>()?.to_vec();
+        let mut buf = [0u8; 4];
+        cur.read_exact(&mut buf)?;
+        let magic_bytes = buf;
+
+        let mut buf = [0u8; 12];
+        cur.read_exact(&mut buf)?;
+        let mut command = buf.to_vec();
         command.retain(|&x| x != 0);
         let command = String::from_utf8(command)?;
-        let size = u32::from_le_bytes(iter.next_chunk::<4>()?);
-        let checksum = iter.next_chunk::<4>()?;
-        let payload = iter.collect::<Vec<u8>>();
+
+        let mut buf = [0u8; 4];
+        cur.read_exact(&mut buf)?;
+        let size = u32::from_le_bytes(buf);
+
+        let mut buf = [0u8; 4];
+        cur.read_exact(&mut buf)?;
+        let checksum = buf;
+
+        let payload = cur.remaining_slice().to_vec();
 
         // TODO: verify if checksum equal checksum(payload)
 

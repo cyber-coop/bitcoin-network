@@ -1,6 +1,7 @@
 use crate::inventory::Inventory;
 use varint::VarInt;
 use crate::error::DeserializeError;
+use std::io::{Cursor, Read};
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct GetData {
@@ -26,15 +27,18 @@ impl GetData {
     }
 
     pub fn deserialize(bytes: &[u8]) -> Result<GetData, DeserializeError> {
-        let mut iter = bytes.iter().cloned();
+        let mut cur = Cursor::new(bytes);
 
-        let count = VarInt::decode(&iter.clone().collect::<Vec<u8>>())?;
-        let varint_size = VarInt::get_size(count)?;
-        iter.advance_by(varint_size as usize)?;
+        let count = VarInt::decode(&cur.remaining_slice())?;
+        let varint_size = VarInt::get_size(count)? as u64;
+        cur.set_position(cur.position() + varint_size);
 
         let mut inventory: Vec<Inventory> = Vec::new();
         for _i in 0..count {
-            let inv = Inventory::deserialize(&iter.next_chunk::<36>()?)?;
+            let mut buf = [0u8; 36];
+            cur.read_exact(&mut buf)?;
+            let inv = Inventory::deserialize(&buf)?;
+
             inventory.push(inv);
         }
         Ok(Self::new(inventory))

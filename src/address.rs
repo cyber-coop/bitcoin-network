@@ -1,4 +1,5 @@
 use crate::error::DeserializeError;
+use std::io::{Cursor, Read};
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct Address {
@@ -18,11 +19,19 @@ impl Address {
     }
 
     pub fn deserialize(bytes: &[u8]) -> Result<Address, DeserializeError> {
-        let mut iter = bytes.iter().cloned();
+        let mut cur = Cursor::new(bytes);
 
-        let services = u64::from_le_bytes(iter.next_chunk::<8>()?);
-        let ip = iter.next_chunk::<16>()?;
-        let port = u16::from_le_bytes(iter.next_chunk::<2>()?);
+        let mut buf = [0u8; 8];
+        cur.read_exact(&mut buf)?;
+        let services = u64::from_le_bytes(buf);
+
+        let mut buf = [0u8; 16];
+        cur.read_exact(&mut buf)?;
+        let ip = buf;
+
+        let mut buf = [0u8; 2];
+        cur.read_exact(&mut buf)?;
+        let port = u16::from_le_bytes(buf);
 
         Ok(Self {
             services,

@@ -1,6 +1,7 @@
 use crate::address::Address;
 use varint::VarInt;
 use crate::error::DeserializeError;
+use std::io::{Cursor, Read};
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct Version {
@@ -32,23 +33,46 @@ impl Version {
     }
 
     pub fn deserialize(bytes: &[u8]) -> Result<Self, DeserializeError> {
-        let mut iter = bytes.iter().cloned();
+        let mut cur = Cursor::new(bytes);
 
-        let version = u32::from_le_bytes(iter.next_chunk::<4>()?);
-        let services = u64::from_le_bytes(iter.next_chunk::<8>()?);
-        let timestamp = u64::from_le_bytes(iter.next_chunk::<8>()?);
-        let addr_recv = Address::deserialize(&iter.next_chunk::<26>()?)?;
-        let addr_trans = Address::deserialize(&iter.next_chunk::<26>()?)?;
-        let nonce = u64::from_le_bytes(iter.next_chunk::<8>()?);
+        let mut buf = [0u8; 4];
+        cur.read_exact(&mut buf)?;
+        let version = u32::from_le_bytes(buf);
 
-        let varint = VarInt::decode(&bytes[80..])?;
-        let varint_size = VarInt::get_size(varint)? as usize;
-        iter.advance_by(varint_size)?;
-        let user_agent = String::from_utf8(iter.clone().take(varint as usize).collect())?;
-        iter.advance_by(varint as usize)?;
+        let mut buf = [0u8; 8];
+        cur.read_exact(&mut buf)?;
+        let services = u64::from_le_bytes(buf);
 
-        let start_height = u32::from_le_bytes(iter.next_chunk::<4>()?);
-        let relay = match iter.next().ok_or(DeserializeError("Missing bytes".to_owned()))? {
+        let mut buf = [0u8; 8];
+        cur.read_exact(&mut buf)?;
+        let timestamp = u64::from_le_bytes(buf);
+
+        let mut buf = [0u8; 26];
+        cur.read_exact(&mut buf)?;
+        let addr_recv = Address::deserialize(&buf)?;
+
+        let mut buf = [0u8; 26];
+        cur.read_exact(&mut buf)?;
+        let addr_trans = Address::deserialize(&buf)?;
+
+        let mut buf = [0u8; 8];
+        cur.read_exact(&mut buf)?;
+        let nonce = u64::from_le_bytes(buf);
+
+        let varint = VarInt::decode(&cur.remaining_slice())?;
+        let varint_size = VarInt::get_size(varint)? as u64;
+        cur.set_position(cur.position() + varint_size);
+
+        let mut buf = vec![0; varint as usize];
+        cur.read_exact(&mut buf)?;
+        let user_agent = String::from_utf8(buf)?;
+
+        let mut buf = [0u8; 4];
+        cur.read_exact(&mut buf)?;
+        let start_height = u32::from_le_bytes(buf);
+
+        // FIXME: Verify there is a a last byte
+        let relay = match cur.remaining_slice()[0] {
             0 => false,
             1 => true,
             _ => { return Err(DeserializeError("Failed to deserialize relay value".to_owned())) }

@@ -2,6 +2,7 @@ use crate::tx::Tx;
 use crate::utils;
 use varint::VarInt;
 use crate::error::DeserializeError;
+use std::io::{Cursor, Read};
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct Block {
@@ -46,24 +47,42 @@ impl Block {
     }
 
     pub fn deserialize(bytes: &[u8]) -> Result<Block, DeserializeError> {
-        let mut iter = bytes.iter().cloned();
+        let mut cur = Cursor::new(bytes);
 
-        // Block header
-        let version = u32::from_le_bytes(iter.next_chunk::<4>()?);
-        let previous_hash = iter.next_chunk::<32>()?;
-        let merkle_root = iter.next_chunk::<32>()?;
-        let timestamp = u32::from_le_bytes(iter.next_chunk::<4>()?);
-        let bits = u32::from_le_bytes(iter.next_chunk::<4>()?);
-        let nonce = u32::from_le_bytes(iter.next_chunk::<4>()?);
+        // Block headers
+        let mut buf = [0u8; 4];
+        cur.read_exact(&mut buf)?;
+        let version = u32::from_le_bytes(buf);
 
-        let count = VarInt::decode(&iter.clone().collect::<Vec<u8>>())?;
+        let mut buf = [0u8; 32];
+        cur.read_exact(&mut buf)?;
+        let previous_hash = buf;
+
+        let mut buf = [0u8; 32];
+        cur.read_exact(&mut buf)?;
+        let merkle_root = buf;
+
+        let mut buf = [0u8; 4];
+        cur.read_exact(&mut buf)?;
+        let timestamp = u32::from_le_bytes(buf);
+    
+        let mut buf = [0u8; 4];
+        cur.read_exact(&mut buf)?;
+        let bits = u32::from_le_bytes(buf);
+
+        let mut buf = [0u8; 4];
+        cur.read_exact(&mut buf)?;
+        let nonce = u32::from_le_bytes(buf);
+
+        let count = VarInt::decode(&cur.remaining_slice())?;
         let varint_size = VarInt::get_size(count)?;
-        iter.advance_by(varint_size as usize)?;
+        cur.set_position(cur.position() + varint_size as u64);
 
         let mut transactions: Vec<Tx> = vec![];
-        for _ in 0..count - 1 {
-            let (tx, tx_size) = Tx::deserialize_with_size(&iter.clone().collect::<Vec<u8>>())?;
-            iter.advance_by(tx_size)?;
+        for _ in 0..count {
+            let (tx, tx_size) = Tx::deserialize_with_size(&cur.remaining_slice())?;
+            cur.set_position(cur.position() + tx_size);
+
             transactions.push(tx);
         }
 
@@ -76,5 +95,18 @@ impl Block {
             nonce,
             transactions,
         })
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::fs;
+
+    #[test]
+    fn test_block_deserialize() {
+        let f = fs::read("./raw_50057.bin").unwrap();
+
+        let block = Block::deserialize(&f).expect("should deserialize raw block");
     }
 }

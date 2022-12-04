@@ -1,4 +1,5 @@
 use crate::error::DeserializeError;
+use std::io::{Cursor, Read};
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct Inventory {
@@ -14,10 +15,15 @@ impl Inventory {
     }
 
     pub fn deserialize(bytes: &[u8]) -> Result<Inventory, DeserializeError> {
-        let mut iter = bytes.iter().cloned();
+        let mut cur = Cursor::new(bytes);
 
-        let identifier = u32::from_le_bytes(iter.next_chunk::<4>()?);
-        let hash = iter.next_chunk::<32>()?;
+        let mut buf = [0u8; 4];
+        cur.read_exact(&mut buf)?;
+        let identifier = u32::from_le_bytes(buf);
+
+        let mut buf = [0u8; 32];
+        cur.read_exact(&mut buf)?;
+        let hash = buf;
 
         Ok( Self {
             identifier,
