@@ -8,7 +8,6 @@ edition = "2021"
 [dependencies]
 sha2 = "0.10.6"
 varint = { git = "https://github.com/cyber-coop/varint", branch = "main" }
-hex = "0.4.3"
 
 [dev-dependencies]
 hex = "0.4.3"

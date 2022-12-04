@@ -27,8 +27,6 @@ impl Tx {
         let count = VarInt::decode(cur.remaining_slice())?;
         let varint_size = VarInt::get_size(count)? as u64;
         cur.set_position(cur.position() + varint_size);
-
-        dbg!(count);
         
         let mut tx_ins: Vec<TxIn> = vec![];
         for _ in 0..count {
