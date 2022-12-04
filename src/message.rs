@@ -41,12 +41,16 @@ impl Message {
         command.retain(|&x| x != 0);
         let command = String::from_utf8(command)?;
         let size = u32::from_le_bytes(iter.next_chunk::<4>()?);
+        let checksum = iter.next_chunk::<4>()?;
         let payload = iter.collect::<Vec<u8>>();
+
+        // TODO: verify if checksum equal checksum(payload)
+
         Ok( Self {
             magic_bytes,
             command,
             size,
-            checksum: checksum(&payload),
+            checksum,
             payload,
         })
     }
