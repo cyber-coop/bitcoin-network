@@ -37,11 +37,11 @@ impl Message {
         let mut iter = bytes.iter().cloned();
 
         let magic_bytes = iter.next_chunk::<4>()?;
-        let mut command = iter.next_chunk::<12>()?;
+        let mut command = iter.next_chunk::<12>()?.to_vec();
         command.retain(|&x| x != 0);
         let command = String::from_utf8(command)?;
         let size = u32::from_le_bytes(iter.next_chunk::<4>()?);
-        let payload = iter.collect<Vec<u8>>();
+        let payload = iter.collect::<Vec<u8>>();
         Ok( Self {
             magic_bytes,
             command,

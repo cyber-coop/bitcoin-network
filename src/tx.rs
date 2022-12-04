@@ -20,13 +20,13 @@ impl Tx {
 
         let version = u32::from_le_bytes(iter.next_chunk::<4>()?);
         // Deserialize tx inputs
-        let count = VarInt::decode(&bytes[4..])?;
+        let count = VarInt::decode(&iter.clone().collect::<Vec<u8>>())?;
         let varint_size = VarInt::get_size(count)?;
-        iter.advance_by(varint_size)?;
+        iter.advance_by(varint_size as usize)?;
 
         let mut tx_ins: Vec<TxIn> = vec![];
         for _ in 1..count {
-            let (tx_in, size) = TxIn::deserialize_with_size(&iter.clone().collect::<Vec<u8>>());
+            let (tx_in, size) = TxIn::deserialize_with_size(&iter.clone().collect::<Vec<u8>>())?;
             iter.advance_by(size)?;
             tx_ins.push(tx_in);
         }
@@ -34,19 +34,20 @@ impl Tx {
         // Deserialize tx ouputs
         let count = VarInt::decode(&iter.clone().collect::<Vec<u8>>())?;
         let varint_size = VarInt::get_size(count)?;
-        iter.advance_by(varint_size)?;
+        iter.advance_by(varint_size as usize)?;
         
         let mut tx_outs : Vec<TxOut> = vec![];
         for _n in 0..count {
-            let (tx_out, size) = TxOut::deserialize_with_size(&bytes[offset..]);
-            offset += size;
+            let (tx_out, size) = TxOut::deserialize_with_size(&iter.clone().collect::<Vec<u8>>())?;
+            iter.advance_by(size)?;
             tx_outs.push(tx_out);
         }
 
-        let lock_time = u32::from_le_bytes(bytes[offset..offset + 4].try_into().unwrap());
-        offset += 4;
+        let lock_time = u32::from_le_bytes(iter.next_chunk::<4>()?);
 
-        (
+        let offset = iter.len() - iter.count();
+
+        Ok((
             Self {
                 version,
                 tx_ins,
@@ -54,11 +55,11 @@ impl Tx {
                 lock_time,
             },
             offset,
-        )
+        ))
     }
 
-    pub fn deserialize(bytes: &[u8]) -> Tx {
-        Self::deserialize_with_size(bytes).0
+    pub fn deserialize(bytes: &[u8]) -> Result<Tx, DeserializeError> {
+        Ok(Self::deserialize_with_size(bytes)?.0)
     }
 }
 
@@ -74,31 +75,34 @@ impl TxIn {
         todo!();
     }
 
-    pub fn deserialize_with_size(bytes: &[u8]) -> (TxIn, usize) {
-        let previous_output = Outpoint::deserialize(&bytes[0..36]);
+    pub fn deserialize_with_size(bytes: &[u8]) -> Result<(TxIn, usize), DeserializeError> {
+        let mut iter = bytes.iter().cloned();
 
-        let input_size = VarInt::decode(&bytes[36..]).unwrap();
-        let varint_size = VarInt::get_size(input_size).unwrap();
-        let mut offset = 36 + varint_size as usize;
+        let previous_output = Outpoint::deserialize(&iter.next_chunk::<36>()?)?;
 
-        let signature_script = bytes[offset..offset + (input_size as usize)].to_vec();
-        offset += input_size as usize;
+        let input_size = VarInt::decode(&iter.clone().collect::<Vec<u8>>())?;
+        let varint_size = VarInt::get_size(input_size)?;
+        iter.advance_by(varint_size as usize)?;
 
-        let sequence = u32::from_le_bytes(bytes[offset..offset + 4].try_into().unwrap());
-        offset += 4;
+        let signature_script = iter.clone().take(input_size as usize).collect::<Vec<u8>>();
+        iter.advance_by(input_size as usize)?;
 
-        (
+        let sequence = u32::from_le_bytes(iter.next_chunk::<4>()?);
+
+        let offset = iter.len() - iter.count();
+
+        Ok((
             Self {
                 previous_output,
                 signature_script,
                 sequence,
             },
             offset,
-        )
+        ))
     }
 
-    pub fn deserialize(bytes: &[u8]) -> TxIn {
-        Self::deserialize_with_size(bytes).0
+    pub fn deserialize(bytes: &[u8]) -> Result<TxIn, DeserializeError> {
+        Ok(Self::deserialize_with_size(bytes)?.0)
     }
 }
 
@@ -113,13 +117,16 @@ impl Outpoint {
         todo!();
     }
 
-    pub fn deserialize(bytes: &[u8]) -> Outpoint {
-        let previous_hash = bytes[0..32].try_into().unwrap();
-        let index = u32::from_le_bytes(bytes[32..36].try_into().unwrap());
-        Self {
+    pub fn deserialize(bytes: &[u8]) -> Result<Outpoint, DeserializeError> {
+        let mut iter = bytes.iter().cloned();
+
+        let previous_hash = iter.next_chunk::<32>()?;
+        let index = u32::from_le_bytes(iter.next_chunk::<4>()?);
+
+        Ok( Self {  
             previous_hash,
             index,
-        }
+        })
     }
 }
 
@@ -134,17 +141,24 @@ impl TxOut {
         todo!();
     }
 
-    pub fn deserialize_with_size(bytes: &[u8]) -> (TxOut, usize) {
-        let value = i64::from_le_bytes(bytes[0..8].try_into().unwrap());
-        let script_size = VarInt::decode(&bytes[8..]).unwrap();
+    pub fn deserialize_with_size(bytes: &[u8]) -> Result<(TxOut, usize), DeserializeError> {
+        let mut iter = bytes.iter().cloned();
+
+        let value = i64::from_le_bytes(iter.next_chunk::<8>()?);
+
+        let script_size = VarInt::decode(&iter.clone().collect::<Vec<u8>>())?;
         let varint_size = VarInt::get_size(script_size).unwrap();
-        let mut offset = 8 + varint_size as usize;
-        let pk_script = bytes[offset..offset + (script_size as usize)].to_vec();
-        offset += script_size as usize;
-        (Self { value, pk_script }, offset)
+        iter.advance_by(varint_size as usize)?;
+
+        let pk_script = iter.clone().take(script_size as usize).collect::<Vec<u8>>();
+        iter.advance_by(script_size as usize)?;
+
+        let offset = iter.len() - iter.count();
+
+        Ok((Self { value, pk_script }, offset))
     }
 
-    pub fn deserialize(bytes: &[u8]) -> TxOut {
-        Self::deserialize_with_size(bytes).0
+    pub fn deserialize(bytes: &[u8]) -> Result<TxOut, DeserializeError> {
+        Ok(Self::deserialize_with_size(bytes)?.0)
     }
 }

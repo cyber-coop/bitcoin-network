@@ -37,8 +37,8 @@ impl Version {
         let version = u32::from_le_bytes(iter.next_chunk::<4>()?);
         let services = u64::from_le_bytes(iter.next_chunk::<8>()?);
         let timestamp = u64::from_le_bytes(iter.next_chunk::<8>()?);
-        let addr_recv = Address::deserialize(&iter.next_chunk::<26>()?);
-        let addr_trans = Address::deserialize(&iter.next_chunk::<26>()?);
+        let addr_recv = Address::deserialize(&iter.next_chunk::<26>()?)?;
+        let addr_trans = Address::deserialize(&iter.next_chunk::<26>()?)?;
         let nonce = u64::from_le_bytes(iter.next_chunk::<8>()?);
 
         let varint = VarInt::decode(&bytes[80..])?;

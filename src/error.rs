@@ -1,5 +1,5 @@
 #[derive(Debug)]
-pub struct DeserializeError(String);
+pub struct DeserializeError(pub String);
 
 
 impl<const N: usize> From<std::array::IntoIter<u8, N>> for DeserializeError {

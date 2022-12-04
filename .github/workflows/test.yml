@@ -1,0 +1,21 @@
+name: test
+
+on:
+  - pull_request
+
+jobs:
+  check:
+    name: Running tests
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v2
+
+      - name: Install nightly toolchain
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: nightly
+          override: true
+
+      - name: Testing
+        run: cargo test

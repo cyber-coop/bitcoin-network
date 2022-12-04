@@ -56,13 +56,13 @@ impl Block {
         let bits = u32::from_le_bytes(iter.next_chunk::<4>()?);
         let nonce = u32::from_le_bytes(iter.next_chunk::<4>()?);
 
-        let count = VarInt::decode(&bytes[80..]?);
-        let varint_size = VarInt::get_size(count).unwrap();
-        iter.advance_by(varint_size)?;
+        let count = VarInt::decode(&iter.clone().collect::<Vec<u8>>())?;
+        let varint_size = VarInt::get_size(count)?;
+        iter.advance_by(varint_size as usize)?;
 
         let mut transactions: Vec<Tx> = vec![];
         for _ in 0..count - 1 {
-            let (tx, tx_size) = Tx::deserialize_with_size(&iter.clone().collect<Vec<u8>>());
+            let (tx, tx_size) = Tx::deserialize_with_size(&iter.clone().collect::<Vec<u8>>())?;
             iter.advance_by(tx_size)?;
             transactions.push(tx);
         }
