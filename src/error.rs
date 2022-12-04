@@ -1,6 +1,16 @@
+use std::error::Error;
+use std::fmt::Display;
+
 #[derive(Debug)]
 pub struct DeserializeError(pub String);
 
+impl Display for DeserializeError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self.0)
+    }
+}
+
+impl Error for DeserializeError {}
 
 impl<const N: usize> From<std::array::IntoIter<u8, N>> for DeserializeError {
     fn from(_e: std::array::IntoIter<u8, N>) -> Self { DeserializeError("Failed to read bytes".to_owned()) }
