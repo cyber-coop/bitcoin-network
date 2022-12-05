@@ -1,5 +1,7 @@
 use crate::inventory::Inventory;
 use varint::VarInt;
+use crate::error::DeserializeError;
+use std::io::{Cursor, Read};
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct GetData {
@@ -24,19 +26,22 @@ impl GetData {
         result
     }
 
-    pub fn deserialize(bytes: &[u8]) -> GetData {
-        let count = VarInt::decode(&bytes[0..9]).unwrap();
-        let varint_size = VarInt::get_size(count).unwrap();
-        let bytes_inventory = &bytes[(varint_size) as usize..];
+    pub fn deserialize(bytes: &[u8]) -> Result<GetData, DeserializeError> {
+        let mut cur = Cursor::new(bytes);
+
+        let count = VarInt::decode(&cur.remaining_slice())?;
+        let varint_size = VarInt::get_size(count)? as u64;
+        cur.set_position(cur.position() + varint_size);
+
         let mut inventory: Vec<Inventory> = Vec::new();
-        for i in 0..count {
-            inventory.push(Inventory::deserialize(
-                &bytes_inventory[(i * 36) as usize..((i + 1) * 36) as usize]
-                    .try_into()
-                    .unwrap(),
-            ));
+        for _i in 0..count {
+            let mut buf = [0u8; 36];
+            cur.read_exact(&mut buf)?;
+            let inv = Inventory::deserialize(&buf)?;
+
+            inventory.push(inv);
         }
-        Self { count, inventory }
+        Ok(Self::new(inventory))
     }
 }
 
@@ -73,7 +78,7 @@ mod tests {
             GetData::deserialize(&[
                 1, 1, 0, 0, 0, 107, 147, 179, 136, 98, 239, 45, 76, 101, 74, 214, 240, 253, 45,
                 190, 104, 79, 55, 249, 227, 231, 46, 84, 176, 124, 122, 172, 68, 191, 0, 244, 91,
-            ]),
+            ]).unwrap(),
             GetData::new(vec![Inventory {
                 identifier: 1,
                 hash: hash.try_into().unwrap(),

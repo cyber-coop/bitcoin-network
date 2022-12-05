@@ -1,4 +1,6 @@
 use crate::utils::checksum;
+use crate::error::DeserializeError;
+use std::io::{Cursor, Read};
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct Message {
@@ -32,20 +34,38 @@ impl Message {
         result
     }
 
-    pub fn deserialize(bytes: &[u8]) -> Message {
-        let magic_bytes = bytes[0..4].try_into().unwrap();
-        let mut command = bytes[4..16].to_vec();
+    pub fn deserialize(bytes: &[u8]) -> Result<Message, DeserializeError> {
+        let mut cur = Cursor::new(bytes);
+
+        let mut buf = [0u8; 4];
+        cur.read_exact(&mut buf)?;
+        let magic_bytes = buf;
+
+        let mut buf = [0u8; 12];
+        cur.read_exact(&mut buf)?;
+        let mut command = buf.to_vec();
         command.retain(|&x| x != 0);
-        let command = String::from_utf8(command).unwrap();
-        let payload_size = u32::from_le_bytes(bytes[16..20].try_into().unwrap());
-        let payload = bytes[24..24 + (payload_size as usize)].to_vec();
-        Self {
+        let command = String::from_utf8(command)?;
+
+        let mut buf = [0u8; 4];
+        cur.read_exact(&mut buf)?;
+        let size = u32::from_le_bytes(buf);
+
+        let mut buf = [0u8; 4];
+        cur.read_exact(&mut buf)?;
+        let checksum = buf;
+
+        let payload = cur.remaining_slice().to_vec();
+
+        // TODO: verify if checksum equal checksum(payload)
+
+        Ok( Self {
             magic_bytes,
             command,
-            size: payload_size.clone(),
-            checksum: checksum(&payload),
+            size,
+            checksum,
             payload,
-        }
+        })
     }
 }
 
@@ -72,7 +92,7 @@ mod tests {
             224, 226,
         ];
         assert_eq!(
-            Message::deserialize(&bytes),
+            Message::deserialize(&bytes).unwrap(),
             Message::new([0xFC, 0xC1, 0xB7, 0xDC], "verack".to_string(), vec![])
         );
     }

@@ -1,5 +1,7 @@
 use crate::address::Address;
 use varint::VarInt;
+use crate::error::DeserializeError;
+use std::io::{Cursor, Read};
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct Version {
@@ -30,30 +32,63 @@ impl Version {
         result
     }
 
-    pub fn deserialize(bytes: &[u8]) -> Version {
-        let varint = VarInt::decode(&bytes[80..89]).unwrap();
-        let varint_size = VarInt::get_size(varint).unwrap();
-        Self {
-            version: u32::from_le_bytes(bytes[0..4].try_into().unwrap()),
-            services: u64::from_le_bytes(bytes[4..12].try_into().unwrap()),
-            timestamp: u64::from_le_bytes(bytes[12..20].try_into().unwrap()),
-            addr_recv: Address::deserialize(bytes[20..46].try_into().unwrap()),
-            addr_trans: Address::deserialize(bytes[46..72].try_into().unwrap()),
-            nonce: u64::from_le_bytes(bytes[72..80].try_into().unwrap()),
-            user_agent: String::from_utf8(
-                bytes[80 + varint_size as usize..80 + varint_size as usize + varint as usize]
-                    .to_vec(),
-            )
-            .unwrap(),
-            start_height: u32::from_le_bytes(
-                bytes[bytes.len() - 5..bytes.len() - 1].try_into().unwrap(),
-            ),
-            relay: match bytes[bytes.len() - 1] {
-                0 => false,
-                1 => true,
-                _ => panic!("Invalid bool in u8"),
-            },
-        }
+    pub fn deserialize(bytes: &[u8]) -> Result<Self, DeserializeError> {
+        let mut cur = Cursor::new(bytes);
+
+        let mut buf = [0u8; 4];
+        cur.read_exact(&mut buf)?;
+        let version = u32::from_le_bytes(buf);
+
+        let mut buf = [0u8; 8];
+        cur.read_exact(&mut buf)?;
+        let services = u64::from_le_bytes(buf);
+
+        let mut buf = [0u8; 8];
+        cur.read_exact(&mut buf)?;
+        let timestamp = u64::from_le_bytes(buf);
+
+        let mut buf = [0u8; 26];
+        cur.read_exact(&mut buf)?;
+        let addr_recv = Address::deserialize(&buf)?;
+
+        let mut buf = [0u8; 26];
+        cur.read_exact(&mut buf)?;
+        let addr_trans = Address::deserialize(&buf)?;
+
+        let mut buf = [0u8; 8];
+        cur.read_exact(&mut buf)?;
+        let nonce = u64::from_le_bytes(buf);
+
+        let varint = VarInt::decode(&cur.remaining_slice())?;
+        let varint_size = VarInt::get_size(varint)? as u64;
+        cur.set_position(cur.position() + varint_size);
+
+        let mut buf = vec![0; varint as usize];
+        cur.read_exact(&mut buf)?;
+        let user_agent = String::from_utf8(buf)?;
+
+        let mut buf = [0u8; 4];
+        cur.read_exact(&mut buf)?;
+        let start_height = u32::from_le_bytes(buf);
+
+        // FIXME: Verify there is a a last byte
+        let relay = match cur.remaining_slice()[0] {
+            0 => false,
+            1 => true,
+            _ => { return Err(DeserializeError("Failed to deserialize relay value".to_owned())) }
+        };
+
+        Ok(Self {
+            version,
+            services,
+            timestamp,
+            addr_recv,
+            addr_trans,
+            nonce,
+            user_agent,
+            start_height,
+            relay,
+        })
     }
 }
 
@@ -101,7 +136,7 @@ mod tests {
                 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 255, 255, 127, 0, 0, 1, 0, 0, 1, 0, 0, 0, 0,
                 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 255, 255, 127, 0, 0, 1, 0, 0, 1, 0, 0, 0, 0,
                 0, 0, 0, 11, 101, 116, 104, 105, 99, 110, 111, 108, 111, 103, 121, 0, 0, 0, 0, 0,
-            ]),
+            ]).unwrap(),
             Version {
                 version: 70004,
                 services: 4,
