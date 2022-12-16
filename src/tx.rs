@@ -1,6 +1,7 @@
 use varint::VarInt;
 use crate::error::DeserializeError;
 use std::io::{Cursor, Read};
+use crate::utils;
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct Tx {
@@ -11,8 +12,26 @@ pub struct Tx {
 }
 
 impl Tx {
+    pub fn hash(&self) -> [u8; 32] {
+        let tx = &self.serialize();
+        utils::double_hash(tx)
+    }
+
     pub fn serialize(&self) -> Vec<u8> {
-        todo!();
+        let mut result: Vec<u8> = vec![];
+
+        result.extend(self.version.to_le_bytes());
+        result.extend(VarInt::encode(self.tx_ins.len() as u64).unwrap());
+        self.tx_ins
+            .iter()
+            .for_each(|txin| { result.extend(txin.serialize()) });
+        result.extend(VarInt::encode(self.tx_outs.len() as u64).unwrap());
+            self.tx_outs
+                .iter()
+                .for_each(|txout| { result.extend(txout.serialize()) });
+        result.extend(self.lock_time.to_le_bytes());
+
+        result
     }
 
     // We only know the size of the tx after deserializing it. To know when the next tx start we have to return the value
@@ -78,7 +97,14 @@ pub struct TxIn {
 
 impl TxIn {
     pub fn serialize(&self) -> Vec<u8> {
-        todo!();
+        let mut result: Vec<u8> = vec![];
+
+        result.extend(self.previous_output.serialize());
+        result.extend(VarInt::encode(self.signature_script.len() as u64).unwrap());
+        result.extend(&self.signature_script);
+        result.extend(self.sequence.to_le_bytes());
+
+        result
     }
 
     pub fn deserialize_with_size(bytes: &[u8]) -> Result<(TxIn, u64), DeserializeError> {
@@ -123,7 +149,12 @@ pub struct Outpoint {
 
 impl Outpoint {
     pub fn serialize(&self) -> Vec<u8> {
-        todo!();
+        let mut result: Vec<u8> = vec![];
+
+        result.extend(self.previous_hash.to_vec());
+        result.extend(self.index.to_be_bytes());
+
+        result
     }
 
     pub fn deserialize(bytes: &[u8]) -> Result<Outpoint, DeserializeError> {
@@ -152,7 +183,13 @@ pub struct TxOut {
 
 impl TxOut {
     pub fn serialize(&self) -> Vec<u8> {
-        todo!();
+        let mut result: Vec<u8> = vec![];
+
+        result.extend(self.value.to_le_bytes());
+        result.extend(VarInt::encode(self.pk_script.len() as u64).unwrap());
+        result.extend(&self.pk_script);
+
+        result
     }
 
     pub fn deserialize_with_size(bytes: &[u8]) -> Result<(TxOut, u64), DeserializeError> {

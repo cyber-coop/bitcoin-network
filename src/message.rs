@@ -30,7 +30,7 @@ impl Message {
         result.extend(command);
         result.extend(self.size.to_le_bytes());
         result.extend(self.checksum);
-        result.extend(self.payload.clone());
+        result.extend(&self.payload);
         result
     }
 
