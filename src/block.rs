@@ -1,4 +1,4 @@
-use crate::tx::Tx;
+use crate::tx::{Tx, TxIn, TxOut};
 use crate::utils;
 use varint::VarInt;
 use crate::error::DeserializeError;
@@ -8,7 +8,7 @@ use std::io::{Cursor, Read};
 pub struct Block {
     pub version: u32,
     // auxpow header (to be compatible with Namecoin and Dogecoin)
-    // pub auxpow_header: Option<AuxPoWHeader>
+    pub auxpow_header: Option<AuxPoWHeader>,
     pub previous_hash: [u8; 32],
     pub merkle_root: [u8; 32],
     pub timestamp: u32,
@@ -43,6 +43,13 @@ impl Block {
         result.extend(self.bits.to_le_bytes());
         result.extend(self.nonce.to_le_bytes());
         //TODO: serialize transactions
+
+        /*self.transactions
+            .iter()
+            .for_each(|t| {
+                result.extend(t.serialize());
+            });*/
+
         result
     }
 
@@ -74,6 +81,12 @@ impl Block {
         cur.read_exact(&mut buf)?;
         let nonce = u32::from_le_bytes(buf);
 
+        if version >= 6422786 {
+            let (aux_power, size) = AuxPoWHeader::deserialize_with_size(&cur.remaining_slice()).unwrap();
+            cur.set_position(cur.position() + size);
+        }
+
+
         let count = VarInt::decode(&cur.remaining_slice())?;
         let varint_size = VarInt::get_size(count)?;
         cur.set_position(cur.position() + varint_size as u64);
@@ -88,6 +101,7 @@ impl Block {
 
         Ok(Self {
             version,
+            auxpow_header: None,
             previous_hash,
             merkle_root,
             timestamp,
@@ -95,6 +109,89 @@ impl Block {
             nonce,
             transactions,
         })
+    }
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct AuxPoWHeader {
+    pub version: u32,
+}
+
+impl AuxPoWHeader {
+    pub fn deserialize_with_size(bytes: &[u8]) -> Result<(Self, u64), DeserializeError> {
+        let mut cur = Cursor::new(bytes);
+
+        let mut buf = [0u8; 4];
+        cur.read_exact(&mut buf)?;
+        let version = u32::from_le_bytes(buf);
+
+        let count = VarInt::decode(cur.remaining_slice())?;
+        let varint_size = VarInt::get_size(count)? as u64;
+        cur.set_position(cur.position() + varint_size);
+
+        let mut tx_ins: Vec<TxIn> = vec![];
+        for _ in 0..count {
+            let (tx_in, size) = TxIn::deserialize_with_size(cur.remaining_slice())?;
+            cur.set_position(cur.position() + size);
+    
+        }
+
+        let count = VarInt::decode(cur.remaining_slice())?;
+        let varint_size = VarInt::get_size(count)? as u64;
+        cur.set_position(cur.position() + varint_size);
+        
+        let mut tx_outs : Vec<TxOut> = vec![];
+        for _ in 0..count {
+            let (tx_out, size) = TxOut::deserialize_with_size(cur.remaining_slice())?;
+            cur.set_position(cur.position() + size);
+        }
+
+        let mut buf = [0u8; 4];
+        cur.read_exact(&mut buf)?;
+        let lock_time = u32::from_le_bytes(buf);
+
+        let mut buf = [0u8; 32];
+        cur.read_exact(&mut buf)?;
+        let parent_hash = buf;
+
+        let count = VarInt::decode(cur.remaining_slice())?;
+        let varint_size = VarInt::get_size(count)? as u64;
+        cur.set_position(cur.position() + varint_size);
+
+        for _ in 0..count {
+            let mut buf = [0u8; 32];
+            cur.read_exact(&mut buf)?;
+            let merkle_hash = buf;
+        }
+
+        let mut buf = [0u8; 4];
+        cur.read_exact(&mut buf)?;
+        let bitmask = u32::from_le_bytes(buf);
+
+        let count = VarInt::decode(cur.remaining_slice())?;
+        let varint_size = VarInt::get_size(count)? as u64;
+        cur.set_position(cur.position() + varint_size);
+
+        for _ in 0..count {
+            let mut buf = [0u8; 32];
+            cur.read_exact(&mut buf)?;
+            let merkle_hash = buf;
+        }
+
+        let mut buf = [0u8; 4];
+        cur.read_exact(&mut buf)?;
+        let bitmask = u32::from_le_bytes(buf);
+
+        let mut buf = [0u8; 80];
+        cur.read_exact(&mut buf)?;
+
+        Ok((
+            Self {
+                version,
+            },
+            cur.position(),
+        ))
+        
     }
 }
 
