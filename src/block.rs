@@ -81,7 +81,7 @@ impl Block {
         cur.read_exact(&mut buf)?;
         let nonce = u32::from_le_bytes(buf);
 
-        if version >= 6422786 {
+        if version >= 6422787 {
             let (aux_power, size) = AuxPoWHeader::deserialize_with_size(&cur.remaining_slice()).unwrap();
             cur.set_position(cur.position() + size);
         }
