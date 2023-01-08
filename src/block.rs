@@ -53,7 +53,7 @@ impl Block {
         result
     }
 
-    pub fn deserialize(bytes: &[u8]) -> Result<Block, DeserializeError> {
+    pub fn deserialize(bytes: &[u8], auxpow_activated: bool) -> Result<Block, DeserializeError> {
         let mut cur = Cursor::new(bytes);
 
         // Block headers
@@ -81,8 +81,11 @@ impl Block {
         cur.read_exact(&mut buf)?;
         let nonce = u32::from_le_bytes(buf);
 
-        if version >= 6422787 {
-            let (aux_power, size) = AuxPoWHeader::deserialize_with_size(&cur.remaining_slice()).unwrap();
+        if auxpow_activated && version >= 6422787 {
+            let (aux_power, size) = match AuxPoWHeader::deserialize_with_size(&cur.remaining_slice()) {
+                Ok((aux_power, size)) => (aux_power, size),
+                Err(error) => { return Err(error); },
+            };
             cur.set_position(cur.position() + size);
         }
 
