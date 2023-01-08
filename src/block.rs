@@ -81,7 +81,7 @@ impl Block {
         cur.read_exact(&mut buf)?;
         let nonce = u32::from_le_bytes(buf);
 
-        if auxpow_activated && version >= 6422787 {
+        if auxpow_activated && version >= 6422786 && nonce == 0 {
             let (aux_power, size) = match AuxPoWHeader::deserialize_with_size(&cur.remaining_slice()) {
                 Ok((aux_power, size)) => (aux_power, size),
                 Err(error) => { return Err(error); },
