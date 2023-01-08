@@ -207,6 +207,6 @@ mod tests {
     fn test_block_deserialize() {
         let f = fs::read("./raw_50057.bin").unwrap();
 
-        let block = Block::deserialize(&f).expect("should deserialize raw block");
+        let block = Block::deserialize(&f, false).expect("should deserialize raw block");
     }
 }
