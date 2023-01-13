@@ -4,7 +4,7 @@ use varint::VarInt;
 use crate::error::DeserializeError;
 use std::io::{Cursor, Read};
 
-const BLOCK_VERSION_AUXPOW_BIT = 0x100;
+const BLOCK_VERSION_AUXPOW_BIT: u32 = 0x100;
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct Block {
@@ -83,7 +83,7 @@ impl Block {
         cur.read_exact(&mut buf)?;
         let nonce = u32::from_le_bytes(buf);
 
-        if auxpow_activated && (version & BLOCK_VERSION_AUXPOW_BIT) {
+        if auxpow_activated && (version & BLOCK_VERSION_AUXPOW_BIT) != 0 {
             let (aux_power, size) = match AuxPoWHeader::deserialize_with_size(&cur.remaining_slice()) {
                 Ok((aux_power, size)) => (aux_power, size),
                 Err(error) => { return Err(error); },
