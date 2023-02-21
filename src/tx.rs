@@ -152,7 +152,7 @@ impl Outpoint {
         let mut result: Vec<u8> = vec![];
 
         result.extend(self.previous_hash.to_vec());
-        result.extend(self.index.to_be_bytes());
+        result.extend(self.index.to_le_bytes());
 
         result
     }
@@ -213,4 +213,21 @@ impl TxOut {
     pub fn deserialize(bytes: &[u8]) -> Result<TxOut, DeserializeError> {
         Ok(Self::deserialize_with_size(bytes)?.0)
     }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_deserialize_tx() {
+        let raw_tx = hex::decode("01000000016277237f8fc506329d1f41c2e9a2bb23647f44460bec2a58a5e3f6f428bb15c2010000006b483045022100d7590246176a68adabb3de7c1a74058db0e39aba905bf7feaa4e8b6a2d5fe2bd0220082385abcfa0e94110445b4578f606eedd7daffd27f387bd98833ed867355d3601210245d41687cf6d72ac6c7e0e4e38043429724aed2fd3bb5a6c6b63f1dcab75f23d0000000002005a6202000000001976a914c664d0aa46ba90d12e79729a2da7e7adfbb6a87588acb81e490c000000001976a914bf2d46e52a44c123cff6ea866eb448249cad17c388ac00000000").unwrap();
+
+        let tx = Tx::deserialize(&raw_tx).unwrap();
+
+        let raw_tx_bis = tx.serialize();
+
+        assert_eq!(raw_tx_bis, raw_tx);
+    }
+
 }
