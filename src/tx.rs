@@ -40,7 +40,7 @@ impl Tx {
 
         let mut buf = [0u8; 4];
         cur.read_exact(&mut buf)?;
-        let version = u32::from_le_bytes(buf);
+        let version = i32::from_le_bytes(buf);
     
         // Deserialize tx inputs
         let count = VarInt::decode(cur.remaining_slice())?;
