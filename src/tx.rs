@@ -5,7 +5,7 @@ use crate::utils;
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct Tx {
-    pub version: u32,
+    pub version: i32,
     pub tx_ins: Vec<TxIn>,
     pub tx_outs: Vec<TxOut>,
     pub lock_time: u32,
