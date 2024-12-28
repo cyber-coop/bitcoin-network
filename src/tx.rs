@@ -43,26 +43,26 @@ impl Tx {
         let version = i32::from_le_bytes(buf);
     
         // Deserialize tx inputs
-        let count = VarInt::decode(cur.remaining_slice())?;
+        let count = VarInt::decode(cur.get_ref())?;
         let varint_size = VarInt::get_size(count)? as u64;
         cur.set_position(cur.position() + varint_size);
         
         let mut tx_ins: Vec<TxIn> = vec![];
         for _ in 0..count {
-            let (tx_in, size) = TxIn::deserialize_with_size(cur.remaining_slice())?;
+            let (tx_in, size) = TxIn::deserialize_with_size(cur.get_ref())?;
             cur.set_position(cur.position() + size);
     
             tx_ins.push(tx_in);
         }
 
         // Deserialize tx ouputs
-        let count = VarInt::decode(cur.remaining_slice())?;
+        let count = VarInt::decode(cur.get_ref())?;
         let varint_size = VarInt::get_size(count)? as u64;
         cur.set_position(cur.position() + varint_size);
         
         let mut tx_outs : Vec<TxOut> = vec![];
         for _ in 0..count {
-            let (tx_out, size) = TxOut::deserialize_with_size(cur.remaining_slice())?;
+            let (tx_out, size) = TxOut::deserialize_with_size(cur.get_ref())?;
             cur.set_position(cur.position() + size);
 
             tx_outs.push(tx_out);
@@ -114,7 +114,7 @@ impl TxIn {
         cur.read_exact(&mut buf)?;
         let previous_output = Outpoint::deserialize(&buf)?;
 
-        let input_size = VarInt::decode(cur.remaining_slice())?;
+        let input_size = VarInt::decode(cur.get_ref())?;
         let varint_size = VarInt::get_size(input_size)? as u64;
         cur.set_position(cur.position() + varint_size);
 
@@ -199,7 +199,7 @@ impl TxOut {
         cur.read_exact(&mut buf)?;
         let value = i64::from_le_bytes(buf);
 
-        let script_size = VarInt::decode(&cur.remaining_slice())?;
+        let script_size = VarInt::decode(cur.get_ref())?;
         let varint_size = VarInt::get_size(script_size)? as u64;
         cur.set_position(cur.position() + varint_size);
 

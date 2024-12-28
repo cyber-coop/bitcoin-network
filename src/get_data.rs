@@ -29,7 +29,7 @@ impl GetData {
     pub fn deserialize(bytes: &[u8]) -> Result<GetData, DeserializeError> {
         let mut cur = Cursor::new(bytes);
 
-        let count = VarInt::decode(&cur.remaining_slice())?;
+        let count = VarInt::decode(cur.get_ref())?;
         let varint_size = VarInt::get_size(count)? as u64;
         cur.set_position(cur.position() + varint_size);
 
