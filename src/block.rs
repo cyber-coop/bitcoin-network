@@ -1,8 +1,8 @@
+use crate::error::DeserializeError;
 use crate::tx::{Tx, TxIn, TxOut};
 use crate::utils;
-use varint::VarInt;
-use crate::error::DeserializeError;
 use std::io::{Cursor, Read};
+use varint::VarInt;
 
 const BLOCK_VERSION_AUXPOW_BIT: u32 = 0x100;
 
@@ -47,10 +47,10 @@ impl Block {
         //TODO: serialize transactions
 
         /*self.transactions
-            .iter()
-            .for_each(|t| {
-                result.extend(t.serialize());
-            });*/
+        .iter()
+        .for_each(|t| {
+            result.extend(t.serialize());
+        });*/
 
         result
     }
@@ -74,7 +74,7 @@ impl Block {
         let mut buf = [0u8; 4];
         cur.read_exact(&mut buf)?;
         let timestamp = u32::from_le_bytes(buf);
-    
+
         let mut buf = [0u8; 4];
         cur.read_exact(&mut buf)?;
         let bits = u32::from_le_bytes(buf);
@@ -86,11 +86,12 @@ impl Block {
         if auxpow_activated && (version & BLOCK_VERSION_AUXPOW_BIT) != 0 {
             let (aux_power, size) = match AuxPoWHeader::deserialize_with_size(cur.split().1) {
                 Ok((aux_power, size)) => (aux_power, size),
-                Err(error) => { return Err(error); },
+                Err(error) => {
+                    return Err(error);
+                }
             };
             cur.set_position(cur.position() + size);
         }
-
 
         let count = VarInt::decode(cur.split().1)?;
         let varint_size = VarInt::get_size(count)?;
@@ -138,14 +139,13 @@ impl AuxPoWHeader {
         for _ in 0..count {
             let (tx_in, size) = TxIn::deserialize_with_size(cur.split().1)?;
             cur.set_position(cur.position() + size);
-    
         }
 
         let count = VarInt::decode(cur.split().1)?;
         let varint_size = VarInt::get_size(count)? as u64;
         cur.set_position(cur.position() + varint_size);
-        
-        let mut tx_outs : Vec<TxOut> = vec![];
+
+        let mut tx_outs: Vec<TxOut> = vec![];
         for _ in 0..count {
             let (tx_out, size) = TxOut::deserialize_with_size(cur.split().1)?;
             cur.set_position(cur.position() + size);
@@ -190,13 +190,7 @@ impl AuxPoWHeader {
         let mut buf = [0u8; 80];
         cur.read_exact(&mut buf)?;
 
-        Ok((
-            Self {
-                version,
-            },
-            cur.position(),
-        ))
-        
+        Ok((Self { version }, cur.position()))
     }
 }
 

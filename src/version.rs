@@ -1,7 +1,7 @@
 use crate::address::Address;
-use varint::VarInt;
 use crate::error::DeserializeError;
 use std::io::{Cursor, Read};
+use varint::VarInt;
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct Version {
@@ -75,7 +75,11 @@ impl Version {
         let relay = match cur.split().1[0] {
             0 => false,
             1 => true,
-            _ => { return Err(DeserializeError("Failed to deserialize relay value".to_owned())) }
+            _ => {
+                return Err(DeserializeError(
+                    "Failed to deserialize relay value".to_owned(),
+                ))
+            }
         };
 
         Ok(Self {
@@ -136,7 +140,8 @@ mod tests {
                 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 255, 255, 127, 0, 0, 1, 0, 0, 1, 0, 0, 0, 0,
                 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 255, 255, 127, 0, 0, 1, 0, 0, 1, 0, 0, 0, 0,
                 0, 0, 0, 11, 101, 116, 104, 105, 99, 110, 111, 108, 111, 103, 121, 0, 0, 0, 0, 0,
-            ]).unwrap(),
+            ])
+            .unwrap(),
             Version {
                 version: 70004,
                 services: 4,

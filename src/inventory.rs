@@ -25,10 +25,7 @@ impl Inventory {
         cur.read_exact(&mut buf)?;
         let hash = buf;
 
-        Ok( Self {
-            identifier,
-            hash,
-        })
+        Ok(Self { identifier, hash })
     }
 }
 
@@ -67,7 +64,8 @@ mod tests {
             Inventory::deserialize(&[
                 1, 0, 0, 0, 107, 147, 179, 136, 98, 239, 45, 76, 101, 74, 214, 240, 253, 45, 190,
                 104, 79, 55, 249, 227, 231, 46, 84, 176, 124, 122, 172, 68, 191, 0, 244, 91,
-            ]).unwrap(),
+            ])
+            .unwrap(),
             Inventory {
                 identifier: 1,
                 hash: bytes_reversed_hash,

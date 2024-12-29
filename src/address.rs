@@ -14,7 +14,7 @@ impl Address {
         result.extend_from_slice(&self.services.to_le_bytes());
         result.extend_from_slice(&self.ip);
         result.extend_from_slice(&self.port.to_le_bytes());
-        
+
         result
     }
 
@@ -33,10 +33,6 @@ impl Address {
         cur.read_exact(&mut buf)?;
         let port = u16::from_le_bytes(buf);
 
-        Ok(Self {
-            services,
-            ip,
-            port,
-        })
+        Ok(Self { services, ip, port })
     }
 }

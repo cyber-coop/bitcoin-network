@@ -1,5 +1,5 @@
-use crate::utils::checksum;
 use crate::error::DeserializeError;
+use crate::utils::checksum;
 use std::io::{Cursor, Read};
 
 #[derive(Debug, Clone, PartialEq)]
@@ -59,7 +59,7 @@ impl Message {
 
         // TODO: verify if checksum equal checksum(payload)
 
-        Ok( Self {
+        Ok(Self {
             magic_bytes,
             command,
             size,

@@ -1,7 +1,7 @@
-use crate::inventory::Inventory;
-use varint::VarInt;
 use crate::error::DeserializeError;
+use crate::inventory::Inventory;
 use std::io::{Cursor, Read};
+use varint::VarInt;
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct GetData {
@@ -78,7 +78,8 @@ mod tests {
             GetData::deserialize(&[
                 1, 1, 0, 0, 0, 107, 147, 179, 136, 98, 239, 45, 76, 101, 74, 214, 240, 253, 45,
                 190, 104, 79, 55, 249, 227, 231, 46, 84, 176, 124, 122, 172, 68, 191, 0, 244, 91,
-            ]).unwrap(),
+            ])
+            .unwrap(),
             GetData::new(vec![Inventory {
                 identifier: 1,
                 hash: hash.try_into().unwrap(),

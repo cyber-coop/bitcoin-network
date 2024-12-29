@@ -13,9 +13,13 @@ impl Display for DeserializeError {
 impl Error for DeserializeError {}
 
 impl From<std::io::Error> for DeserializeError {
-    fn from(_e: std::io::Error) -> Self { DeserializeError("Failed to read varint".to_owned()) }
+    fn from(_e: std::io::Error) -> Self {
+        DeserializeError("Failed to read varint".to_owned())
+    }
 }
 
 impl From<std::string::FromUtf8Error> for DeserializeError {
-    fn from(_e: std::string::FromUtf8Error) -> Self { DeserializeError("Failed to convert from utf8".to_owned()) }
+    fn from(_e: std::string::FromUtf8Error) -> Self {
+        DeserializeError("Failed to convert from utf8".to_owned())
+    }
 }
