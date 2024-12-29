@@ -1,5 +1,5 @@
-use crate::utils::checksum;
 use crate::error::DeserializeError;
+use crate::utils::checksum;
 use std::io::{Cursor, Read};
 
 #[derive(Debug, Clone, PartialEq)]
@@ -55,11 +55,11 @@ impl Message {
         cur.read_exact(&mut buf)?;
         let checksum = buf;
 
-        let payload = cur.remaining_slice().to_vec();
+        let payload = cur.split().1.to_vec();
 
         // TODO: verify if checksum equal checksum(payload)
 
-        Ok( Self {
+        Ok(Self {
             magic_bytes,
             command,
             size,

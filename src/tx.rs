@@ -1,7 +1,7 @@
-use varint::VarInt;
 use crate::error::DeserializeError;
-use std::io::{Cursor, Read};
 use crate::utils;
+use std::io::{Cursor, Read};
+use varint::VarInt;
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct Tx {
@@ -24,11 +24,11 @@ impl Tx {
         result.extend(VarInt::encode(self.tx_ins.len() as u64).unwrap());
         self.tx_ins
             .iter()
-            .for_each(|txin| { result.extend(txin.serialize()) });
+            .for_each(|txin| result.extend(txin.serialize()));
         result.extend(VarInt::encode(self.tx_outs.len() as u64).unwrap());
-            self.tx_outs
-                .iter()
-                .for_each(|txout| { result.extend(txout.serialize()) });
+        self.tx_outs
+            .iter()
+            .for_each(|txout| result.extend(txout.serialize()));
         result.extend(self.lock_time.to_le_bytes());
 
         result
@@ -41,28 +41,28 @@ impl Tx {
         let mut buf = [0u8; 4];
         cur.read_exact(&mut buf)?;
         let version = i32::from_le_bytes(buf);
-    
+
         // Deserialize tx inputs
-        let count = VarInt::decode(cur.remaining_slice())?;
+        let count = VarInt::decode(cur.split().1)?;
         let varint_size = VarInt::get_size(count)? as u64;
         cur.set_position(cur.position() + varint_size);
-        
+
         let mut tx_ins: Vec<TxIn> = vec![];
         for _ in 0..count {
-            let (tx_in, size) = TxIn::deserialize_with_size(cur.remaining_slice())?;
+            let (tx_in, size) = TxIn::deserialize_with_size(cur.split().1)?;
             cur.set_position(cur.position() + size);
-    
+
             tx_ins.push(tx_in);
         }
 
         // Deserialize tx ouputs
-        let count = VarInt::decode(cur.remaining_slice())?;
+        let count = VarInt::decode(cur.split().1)?;
         let varint_size = VarInt::get_size(count)? as u64;
         cur.set_position(cur.position() + varint_size);
-        
-        let mut tx_outs : Vec<TxOut> = vec![];
+
+        let mut tx_outs: Vec<TxOut> = vec![];
         for _ in 0..count {
-            let (tx_out, size) = TxOut::deserialize_with_size(cur.remaining_slice())?;
+            let (tx_out, size) = TxOut::deserialize_with_size(cur.split().1)?;
             cur.set_position(cur.position() + size);
 
             tx_outs.push(tx_out);
@@ -114,7 +114,7 @@ impl TxIn {
         cur.read_exact(&mut buf)?;
         let previous_output = Outpoint::deserialize(&buf)?;
 
-        let input_size = VarInt::decode(cur.remaining_slice())?;
+        let input_size = VarInt::decode(cur.split().1)?;
         let varint_size = VarInt::get_size(input_size)? as u64;
         cur.set_position(cur.position() + varint_size);
 
@@ -168,7 +168,7 @@ impl Outpoint {
         cur.read_exact(&mut buf)?;
         let index = u32::from_le_bytes(buf);
 
-        Ok( Self {  
+        Ok(Self {
             previous_hash,
             index,
         })
@@ -199,7 +199,7 @@ impl TxOut {
         cur.read_exact(&mut buf)?;
         let value = i64::from_le_bytes(buf);
 
-        let script_size = VarInt::decode(&cur.remaining_slice())?;
+        let script_size = VarInt::decode(cur.split().1)?;
         let varint_size = VarInt::get_size(script_size)? as u64;
         cur.set_position(cur.position() + varint_size);
 
@@ -229,5 +229,4 @@ mod tests {
 
         assert_eq!(raw_tx_bis, raw_tx);
     }
-
 }

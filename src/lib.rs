@@ -1,4 +1,4 @@
-#![feature(iter_next_chunk, iter_advance_by, cursor_remaining)]
+#![feature(cursor_split)]
 
 pub mod address;
 pub mod block;

@@ -1,7 +1,7 @@
 use crate::address::Address;
-use varint::VarInt;
 use crate::error::DeserializeError;
 use std::io::{Cursor, Read};
+use varint::VarInt;
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct Version {
@@ -59,7 +59,7 @@ impl Version {
         cur.read_exact(&mut buf)?;
         let nonce = u64::from_le_bytes(buf);
 
-        let varint = VarInt::decode(&cur.remaining_slice())?;
+        let varint = VarInt::decode(cur.split().1)?;
         let varint_size = VarInt::get_size(varint)? as u64;
         cur.set_position(cur.position() + varint_size);
 
@@ -72,10 +72,14 @@ impl Version {
         let start_height = u32::from_le_bytes(buf);
 
         // FIXME: Verify there is a a last byte
-        let relay = match cur.remaining_slice()[0] {
+        let relay = match cur.split().1[0] {
             0 => false,
             1 => true,
-            _ => { return Err(DeserializeError("Failed to deserialize relay value".to_owned())) }
+            _ => {
+                return Err(DeserializeError(
+                    "Failed to deserialize relay value".to_owned(),
+                ))
+            }
         };
 
         Ok(Self {
@@ -136,7 +140,8 @@ mod tests {
                 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 255, 255, 127, 0, 0, 1, 0, 0, 1, 0, 0, 0, 0,
                 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 255, 255, 127, 0, 0, 1, 0, 0, 1, 0, 0, 0, 0,
                 0, 0, 0, 11, 101, 116, 104, 105, 99, 110, 111, 108, 111, 103, 121, 0, 0, 0, 0, 0,
-            ]).unwrap(),
+            ])
+            .unwrap(),
             Version {
                 version: 70004,
                 services: 4,
