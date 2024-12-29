@@ -1,3 +1,5 @@
+#![feature(cursor_split)]
+
 pub mod address;
 pub mod block;
 pub mod error;

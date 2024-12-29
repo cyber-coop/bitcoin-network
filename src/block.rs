@@ -84,7 +84,7 @@ impl Block {
         let nonce = u32::from_le_bytes(buf);
 
         if auxpow_activated && (version & BLOCK_VERSION_AUXPOW_BIT) != 0 {
-            let (aux_power, size) = match AuxPoWHeader::deserialize_with_size(cur.get_ref()) {
+            let (aux_power, size) = match AuxPoWHeader::deserialize_with_size(cur.split().1) {
                 Ok((aux_power, size)) => (aux_power, size),
                 Err(error) => { return Err(error); },
             };
@@ -92,13 +92,13 @@ impl Block {
         }
 
 
-        let count = VarInt::decode(cur.get_ref())?;
+        let count = VarInt::decode(cur.split().1)?;
         let varint_size = VarInt::get_size(count)?;
         cur.set_position(cur.position() + varint_size as u64);
 
         let mut transactions: Vec<Tx> = vec![];
         for _ in 0..count {
-            let (tx, tx_size) = Tx::deserialize_with_size(cur.get_ref())?;
+            let (tx, tx_size) = Tx::deserialize_with_size(cur.split().1)?;
             cur.set_position(cur.position() + tx_size);
 
             transactions.push(tx);
@@ -130,24 +130,24 @@ impl AuxPoWHeader {
         cur.read_exact(&mut buf)?;
         let version = u32::from_le_bytes(buf);
 
-        let count = VarInt::decode(cur.get_ref())?;
+        let count = VarInt::decode(cur.split().1)?;
         let varint_size = VarInt::get_size(count)? as u64;
         cur.set_position(cur.position() + varint_size);
 
         let mut tx_ins: Vec<TxIn> = vec![];
         for _ in 0..count {
-            let (tx_in, size) = TxIn::deserialize_with_size(cur.get_ref())?;
+            let (tx_in, size) = TxIn::deserialize_with_size(cur.split().1)?;
             cur.set_position(cur.position() + size);
     
         }
 
-        let count = VarInt::decode(cur.get_ref())?;
+        let count = VarInt::decode(cur.split().1)?;
         let varint_size = VarInt::get_size(count)? as u64;
         cur.set_position(cur.position() + varint_size);
         
         let mut tx_outs : Vec<TxOut> = vec![];
         for _ in 0..count {
-            let (tx_out, size) = TxOut::deserialize_with_size(cur.get_ref())?;
+            let (tx_out, size) = TxOut::deserialize_with_size(cur.split().1)?;
             cur.set_position(cur.position() + size);
         }
 
@@ -159,7 +159,7 @@ impl AuxPoWHeader {
         cur.read_exact(&mut buf)?;
         let parent_hash = buf;
 
-        let count = VarInt::decode(cur.get_ref())?;
+        let count = VarInt::decode(cur.split().1)?;
         let varint_size = VarInt::get_size(count)? as u64;
         cur.set_position(cur.position() + varint_size);
 
@@ -173,7 +173,7 @@ impl AuxPoWHeader {
         cur.read_exact(&mut buf)?;
         let bitmask = u32::from_le_bytes(buf);
 
-        let count = VarInt::decode(cur.get_ref())?;
+        let count = VarInt::decode(cur.split().1)?;
         let varint_size = VarInt::get_size(count)? as u64;
         cur.set_position(cur.position() + varint_size);
 

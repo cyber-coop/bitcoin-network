@@ -55,7 +55,7 @@ impl Message {
         cur.read_exact(&mut buf)?;
         let checksum = buf;
 
-        let payload = cur.get_ref().to_vec();
+        let payload = cur.split().1.to_vec();
 
         // TODO: verify if checksum equal checksum(payload)
 
