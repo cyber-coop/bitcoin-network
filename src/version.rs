@@ -59,7 +59,7 @@ impl Version {
         cur.read_exact(&mut buf)?;
         let nonce = u64::from_le_bytes(buf);
 
-        let varint = VarInt::decode(cur.get_ref())?;
+        let varint = VarInt::decode(cur.split().1)?;
         let varint_size = VarInt::get_size(varint)? as u64;
         cur.set_position(cur.position() + varint_size);
 
@@ -72,7 +72,7 @@ impl Version {
         let start_height = u32::from_le_bytes(buf);
 
         // FIXME: Verify there is a a last byte
-        let relay = match cur.get_ref()[0] {
+        let relay = match cur.split().1[0] {
             0 => false,
             1 => true,
             _ => { return Err(DeserializeError("Failed to deserialize relay value".to_owned())) }
